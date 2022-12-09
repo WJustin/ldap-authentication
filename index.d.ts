@@ -21,6 +21,8 @@ declare module 'ldap-authentication' {
 
   export function authenticate(options: AuthenticationOptions): Promise<any>
 
+  export function searchUsers(options: AuthenticationOptions): Promise<any>
+
   export class LdapAuthenticationError extends Error {
     constructor(message: any)
     name: string

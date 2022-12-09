@@ -437,6 +437,54 @@ async function authenticate(options) {
   )
 }
 
+async function searchUsers(options) {
+  let ldapAdminClient
+  try {
+    ldapAdminClient = await _ldapBind(
+      options.adminDn,
+      options.adminPassword,
+      options.starttls,
+      options.ldapOpts
+    )
+  } catch (error) {
+    throw { admin: error }
+  }
+  return new Promise((resolve, reject) => {
+    let searchOptions = {
+      filter: options.filter,
+      scope: 'sub',
+      attributes: options.attributes,
+    }
+    ldapAdminClient.search(
+      options.userSearchBase,
+      searchOptions,
+      function (err, res) {
+        let array = []
+        if (err) {
+          reject(err)
+          ldapAdminClient.unbind()
+          return
+        }
+        res.on('searchEntry', function (entry) {
+          array.push(entry.object)
+        })
+        res.on('error', function (err) {
+          reject(err)
+          ldapAdminClient.unbind()
+        })
+        res.on('end', function (result) {
+          if (result.status != 0) {
+            reject(new Error('ldap search status is not 0, search failed'))
+          } else {
+            resolve(array)
+          }
+          ldapAdminClient.unbind()
+        })
+      }
+    )
+  })
+}
+
 class LdapAuthenticationError extends Error {
   constructor(message) {
     super(message)
@@ -450,4 +498,5 @@ class LdapAuthenticationError extends Error {
 }
 
 module.exports.authenticate = authenticate
+module.exports.searchUsers = searchUsers
 module.exports.LdapAuthenticationError = LdapAuthenticationError
